@@ -1,0 +1,147 @@
+    def name(self, stock_name=None):
+        if stock_name is not None:
+            self.name = stock_name
+        return self.name
+
+    def symbol(self, stock_symbol=None):
+        if stock_symbol is not None:
+            self.symbol = stock_symbol
+        return self.symbol
+
+    def dates(self, stock_dates=None):
+        if stock_dates is not None:
+            self.dates = stock_dates
+        return self.dates
+
+    def str_dates(self, stock_str_dates=None):
+        if stock_str_dates is not None:
+            self.str_dates = stock_str_dates
+        return self.str_dates
+
+    def week_historical(self, stock_week_historical=None):
+        if stock_week_historical is not None:
+            self.week_historical = stock_week_historical
+        return self.week_historical
+
+    def month_historical(self, stock_month_historical=None):
+        if stock_month_historical is not None:
+            self.month_historical = stock_month_historical
+        return self.month_historical
+
+    def year_historical(self, stock_year_historical=None):
+        if stock_year_historical is not None:
+            self.year_historical = stock_year_historical
+        return self.year_historical
+
+    def market(self, stock_market=None):
+        if stock_market is not None:
+            self.market = stock_market
+        return self.market
+
+    def related_terms(self, stock_related_terms=None):
+        if stock_related_terms is not None:
+            self.related_terms = stock_related_terms
+        return stock_related_terms
+
+    def add_related_term(self, related_term):
+        self.related_terms += [related_term]
+
+    def google_trends(self, stock_google_trends=None):
+        if stock_google_trends is not None:
+            self.google_trends = stock_google_trends
+        return self.google_trends
+
+    def ad_meter(self, stock_ad_meter=None):
+        if stock_ad_meter is not None:
+            self.ad_meter = stock_ad_meter
+        return self.ad_meter
+
+    def twitter_sentiment(self, stock_twitter_sentiment=None):
+        if stock_twitter_sentiment is not None:
+            self.twitter_sentiment = stock_twitter_sentiment
+        return self.twitter_sentiment
+
+    def reddit_sentiment(self, stock_reddit_sentiment=None):
+        if stock_reddit_sentiment is not None:
+            self.reddit_sentiment = stock_reddit_sentiment
+        return self.reddit_sentiment
+
+    def press_release_sentiment(self, stock_press_release_sentiment=None):
+        if stock_press_release_sentiment is not None:
+            self.press_release_sentiment = stock_press_release_sentiment
+        return self.press_release_sentiment
+
+    def moving_average_200(self, stock_moving_average_200=None):
+        if stock_moving_average_200 is not None:
+            self.moving_average_200 = stock_moving_average_200
+        return self.moving_average_200
+
+    def moving_average_50(self, stock_moving_average_50=None):
+        if stock_moving_average_50 is not None:
+            self.moving_average_50 = stock_moving_average_50
+        return self.moving_average_50
+
+    def volatility(self, stock_volatility=None):
+        if stock_volatility is not None:
+            self.volatility = stock_volatility
+        return self.volatility
+
+    def relative_strength_index(self, stock_relative_strength_index=None):
+        if stock_relative_strength_index is not None:
+            self.relative_strength_index = stock_relative_strength_index
+        return self.relative_strength_index
+
+    def moving_average_convergence_divergence(self, stock_moving_average_convergence_divergence=None):
+        if stock_moving_average_convergence_divergence is not None:
+            self.moving_average_convergence_divergence = stock_moving_average_convergence_divergence
+        return self.moving_average_convergence_divergence
+
+    def golden_cross(self, stock_golden_cross=None):
+        if stock_golden_cross is not None:
+            self.golden_cross = stock_golden_cross
+        return self.golden_cross
+
+    def pullback(self, stock_pullback=None):
+        if stock_pullback is not None:
+            self.pullback = stock_pullback
+        return self.pullback
+
+    def on_balance_volume(self, stock_on_balance_volume=None):
+        if stock_on_balance_volume is not None:
+            self.on_balance_volume = stock_on_balance_volume
+        return self.on_balance_volume
+
+    def pivot_point(self, stock_pivot_point=None):
+        if stock_pivot_point is not None:
+            self.pivot_point = stock_pivot_point
+        return self.pivot_point
+
+    def advance_decline_line(self, stock_advance_decline_line=None):
+        if stock_advance_decline_line is not None:
+            self.advance_decline_line = stock_advance_decline_line
+        return self.advance_decline_line
+
+    def average_directional_index(self, stock_average_directional_index=None):
+        if stock_average_directional_index is not None:
+            self.average_directional_index = stock_average_directional_index
+        return self.average_directional_index
+
+    def aroon(self, stock_aroon=None):
+        if stock_aroon is not None:
+            self.aroon = stock_aroon
+        return self.aroon
+
+    def stochastic_oscillator(self, stock_stochastic_oscillator=None):
+        if stock_stochastic_oscillator is not None:
+            self.stochastic_oscillator = stock_stochastic_oscillator
+        return self.stochastic_oscillator
+
+    def layoff_analysis(self, stock_layoff_analysis):
+        if stock_layoff_analysis is not None:
+            self.layoff_analysis = stock_layoff_analysis
+        return self.layoff_analysis
+
+    def auto_encoded_stock_info(self, stock_auto_encoded_stock_info):
+        if stock_auto_encoded_stock_info is not None:
+            self.auto_encoded_stock_info = stock_auto_encoded_stock_info
+        return self.auto_encoded_stock_info
