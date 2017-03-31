@@ -46,6 +46,8 @@ def future_krogh(df):
     :param df: df to predict
     :return: new dataframe that has been predicted
     """
+    # TODO make it so the algorithm fills in first blank then re reuns and fills second blank and so on
+    # TODO make it take past data that can be used to get futures with more accuraccy building o that initial
     new_df = pd.DataFrame()
     for column in df:
         print(column)

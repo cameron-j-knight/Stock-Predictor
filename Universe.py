@@ -118,10 +118,9 @@ class StockData(object):
         build_string += build_scalar_string(self.moving_average_convergence_divergence,
                                             "Moving Average Covergance Divergance")
 
-        build_string += build_scalar_string(self.on_balance_volume,
-                                            "On Balance Volume")
-        build_string += build_scalar_string(self.aroon,
-                                            "Aroon Oscillator")
+        build_string += build_scalar_string(self.on_balance_volume, "On Balance Volume")
+        build_string += build_scalar_string(self.aroon, "Aroon Oscillator")
+        build_string += build_scalar_string(self.golden_cross, "Golden Cross")
         build_string += build_list_string(self.month_futures,  "Month Futures")
         build_string += build_list_string(self.week_futures, "Week Futures")
         build_string += build_list_string(self.day_futures, "Day Futures")
@@ -412,14 +411,32 @@ class DataTypes:
             data.moving_average_convergence_divergence = \
                 pd.DataFrame({"MACD": data.moving_average_convergence_divergence}).set_index(data.dates)
 
-
     def golden_cross(data, historical=True):
         verbose_message("Collecting golden cross Data for " + data.symbol)
         if not historical:
             pass
         else:
-            pass
+            if data.moving_average_50 is None:
+                verbose_message(
+                    "\t50 day moving average data required for golden cross \
+                    data: Collecting 50 day  moving average data")
 
+                DataTypes.moving_average_50(data)
+
+            if data.moving_average_200 is None:
+                verbose_message(
+                    "\t200 day moving average data required for golden cross \
+                    data: Collecting 200 day  moving average data")
+
+                DataTypes.moving_average_200(data)
+
+            # TODO Find when they cross, mark distance beteween them
+            data.golden_cross = []
+            for d in data.dates:
+                data.golden_cross += [data.moving_average_50.get_value(d, "MA_50") -
+                                      data.moving_average_200.get_value(d, "MA_200")]
+            data.golden_cross = \
+                pd.DataFrame({"Golden_Cross": data.golden_cross}).set_index(data.dates)
         pass
 
     def pullbacks(data, historical=True):
