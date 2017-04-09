@@ -803,6 +803,7 @@ class Universe(object):
     def __len__(self):
         return len(self.stocks)
 
-a = Universe(['MMM'], "2012-03-05", "2012-06-05", features=DataTypes.ALL)
-a.add_stock('X')
-print(len(a))
+if __name__ == '__main__':
+    a = Universe(['MMM'], "2012-03-05", "2012-06-05", features=DataTypes.ALL)
+    a.add_stock('X')
+    print(len(a))

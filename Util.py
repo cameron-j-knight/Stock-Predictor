@@ -22,6 +22,7 @@ trends_password1 = "L1laiteigo!go"
 trends_username2 = "jeffeled@gmail.com"
 trends_password2 = "Avpr1423"
 
+stock_list = "Stocks.txt"
 
 # Utility Methods
 class FillMethod:
@@ -129,6 +130,7 @@ def verbose_message(message):
     """
     if VERBOSE:
         print(message)
+
 
 def debug_message(message):
     """
