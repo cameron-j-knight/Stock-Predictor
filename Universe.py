@@ -7,6 +7,9 @@ import numpy as np
 Author: Cameron Knight
 Copyright 2017, Cameron Knight, All rights reserved.
 """
+
+class StockDayData
+
 class StockData(object):
     def __init__(self, stock_name=None, stock_symbol=None):
         self.name = stock_name
@@ -52,6 +55,10 @@ class StockData(object):
         self.day_futures = None
         self.week_futures= None
         self.month_futures = None
+
+        self.position = None
+
+        self._verbose = False
 
     def all_scalar_data(self):
         vars = [i for i in dir(self) if not callable(getattr(self, i)) and
@@ -468,8 +475,7 @@ class DataTypes:
 
                 last_date = d
             data.on_balance_volume = \
-                pd.DataFrame({"OBV": data.on_balance_volume}).set_index(data.dates) 
-
+                pd.DataFrame({"OBV": data.on_balance_volume}).set_index(data.dates)
 
     def pivot_point(data, historical=True):
         verbose_message("Collecting pivot point Data for " + data.symbol)
@@ -478,7 +484,6 @@ class DataTypes:
         else:
             pass
         pass
-
 
     def a_d_line(data, historical=True):
         verbose_message("Collecting a/d line Data for " + data.symbol)
@@ -563,7 +568,6 @@ class DataTypes:
             pass
 
         pass
-
 
     def month_futures(data, historical=True):
         verbose_message("Collecting Month Future Data for " + data.symbol)
@@ -701,8 +705,24 @@ class Universe(object):
         for collection_function in self.features:
             collection_function(data)
 
+        self.stock_data[symbol].position = []
+        for date in data.dates:
+            self.stock_data[symbol].position += [0]
+
+        self.stock_data[symbol].position =\
+            pd.DataFrame({"position": self.stock_data[symbol].position}).set_index(self.stock_data[symbol].dates)
+
         debug_message(data)
         self.stock_data[symbol] = data
+
+
+    def get_back_data(self,date):
+        """
+        gets the data up to the date
+        :param date: date to get data up to
+        :return: StockData
+        """
+        pass
 
     def collect_all_stock_data(self):
         """
@@ -712,7 +732,7 @@ class Universe(object):
         for stock in self.stocks:
             self.add_stock(stock)
 
-    def __init__(self, stocks, start_date='FiveYear', end_date='historical', features=None):
+    def __init__(self, stocks, start_date='FiveYear', end_date='historical', features=None, verbose=False, capital=0):
         """
         initializes the stock universe
         :param stocks:
@@ -722,7 +742,7 @@ class Universe(object):
         """
 
         # Set default features
-        if features is not list:
+        if type(features) is not list:
             features = [features]
 
         if features is None:
@@ -732,6 +752,7 @@ class Universe(object):
             features = DataTypes.ALL
 
         # set variables for a stock universe
+        self.verbose = verbose
         self.stocks = stocks
         self.features = features
         self.stock_data = {}
@@ -747,9 +768,9 @@ class Universe(object):
         self.str_dates = []
         self.dates = []
         self.collect_all_stock_data()
+        self.capital = capital
 
         # TODO add ability to order stocks and build a profile having total percent returns as well as capital
-
         # TODO have ability to select types of data to get fundementals, trends, stock twits anal,
         # TODO ad meter, past prices and volumes, twitter reddit and press releases
 
@@ -759,7 +780,20 @@ class Universe(object):
         else:
             return self.stock_data[stock]
 
+    def run_back_test(self,algorithm):
+        """
+        runs the back test algorithm to
+        :param algorithm: algorthm that takes backData(data up to the day) into account
+        :return: total returns for each day in the back test
+        """
+        pass
+
     def get_data_date(self, date):
+        """
+        gets the data on a given date
+        :param date: the date to get data for
+        :return: StockData for the day
+        """
         pass
 
     def get_data_historical(self):
@@ -794,6 +828,61 @@ class Universe(object):
         if stock in self.stock_data.keys():
             del self.stock_data[stock]
 
+    def order_stock(self, stock, ammount, date=None):
+        """
+        orders an ammount of stocks if is able to be done
+        :param stock: the name of stock to order
+        :param ammount: ammount of the stock to buy
+        :param date: date to buy on
+        :return: true if can be bought false if it is not purchased
+        """
+        # TODO add functionality to fail a stock purchase if there is not enough funds available to buy
+        if date is None:
+            date = self.date
+
+        self.stock_data[stock].position.set_value(date, 'position', ammount)
+
+        return True
+
+    def get_day_evaluation(self,stocks):
+        """
+        gets value for the day based on stock holdings
+        :param stocks:
+        :return:
+        """
+        pass
+
+    def get_evaluation(self, start=None, end=None, stocks=None):
+        """
+        gets the returns over a peroid of time for a set of stocks
+        :param start: the strat date to get profits
+        :param end: end date to calcualte profits
+        :param stock: the list of stocks to get the profits for
+        :return: profits in dollars
+        """
+        if stocks is None:
+            stocks= self.stocks
+
+        if start is None:
+            start = self.dates[0]
+
+        if end is None:
+            end = self.dates[-1]
+
+        dates_to_check = self.dates[self.dates.index(start):self.dates.index(end)]
+        cash = 0
+        stocks = 0
+        total_assets = 0
+
+        for stock in stocks:
+            for day in dates_to_check:
+        # TODO HOW DO I deal with buys and sells
+
+        pass
+
+    def set_capital(self, ammount):
+        self.capital = ammount
+
     def __getitem__(self, item):
         return self.get_data(stock=item)
 
@@ -803,6 +892,8 @@ class Universe(object):
     def __len__(self):
         return len(self.stocks)
 
+    def __contains__(self,item):
+        return item in self.stock_data.keys()
 if __name__ == '__main__':
     a = Universe(['MMM'], "2012-03-05", "2012-06-05", features=DataTypes.ALL)
     a.add_stock('X')

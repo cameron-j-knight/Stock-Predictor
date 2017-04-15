@@ -104,7 +104,7 @@ def get_market_data(stock, start_date='FiveYear', end_date='Today'):
                 long_stock = long_stock.apply(pd.to_numeric, errors='coerce')
                 return long_stock
         except yahoo_finance.YQLResponseMalformedError:
-            print("Data not collected for " + stock + ". Trying Again: Attempt " + str(i))
+            print("Data not collected for " + stock + ". Trying Again: Attempt " + str(i + 1))
     return None
 
 

@@ -11,8 +11,8 @@ LENGTH_MONTH = 30 * LENGTH_DAY  # number of days to consider a month
 LENGTH_WEEK = 5 * LENGTH_DAY    # number of days to consider a week
 USEFUL_TIMESTAMP_CHARS = 10     # number of characters that are useful in a timestamp
 FAIL_DELAY = 60                 # amount of time taken after a failure in case of too many calls
-DEBUG = True
-VERBOSE = True
+DEBUG = False
+VERBOSE = False
 RSI_PERIOD = 14                 # number of days to use as the period for rsi calculation
 AROON_PERIOD = 25                # number of days to base aroon oscillator calculation on.
 # Username Passwords Keys
