@@ -2,15 +2,70 @@ import datetime
 from Util import *
 import StockDataCollection
 import numpy as np
-
+import matplotlib.pyplot as plt
 """
 Author: Cameron Knight
 Copyright 2017, Cameron Knight, All rights reserved.
 """
+# TODO incorporate trade costs
 
-class StockDayData
+
+class Order:
+    """
+    an order for the number of stocks to own after a given execution of an algorithm
+    """
+    def __init__(self):
+        """
+        creates a stock order
+        """
+        self.orders = {}
+
+    def add_order_from_dict(self, stock_amounts):
+        """
+        orders a stock using a dictionary of stocks and ammounts
+        :param stock_amounts: dictionary in form (symbol, amount to hold)
+        :return: None
+        """
+        for stock in stock_amounts.keys():
+            self.orders[stock] = stock_amounts[stock]
+
+    def buy(self, stock, amount):
+        """
+        buys an amount of a stock
+        :param stock: symbol of stock to buy
+        :param amount: number of stocks to buy
+        :return: None
+        """
+        self.orders[stock] += amount
+
+    def sell(self, stock, amount):
+        """
+        sells a given stock (negative amount is a short)
+        :param stock: symbol of stock to buy
+        :param amount: the number of stocks to sell
+        :return: None
+        """
+        self.orders[stock] -= amount
+
+    def order(self, stock, amount):
+        """
+        orders a number of stocks so you are holding a given amount (negative is short)
+        :param stock: symbol of stock to order
+        :param amount: number of stock you want to hold
+        :return: None
+        """
+        self.orders[stock] = amount
+
+    def __str__(self):
+        return str(self.orders)
+
+    # TODO add limit buys and sells to be more interactive with the market
+
 
 class StockData(object):
+    """
+    holds the data for a stock
+    """
     def __init__(self, stock_name=None, stock_symbol=None):
         self.name = stock_name
         self.symbol = stock_symbol
@@ -53,23 +108,43 @@ class StockData(object):
         self.week_growth = None
         self.month_growth = None
         self.day_futures = None
-        self.week_futures= None
+        self.week_futures = None
         self.month_futures = None
 
         self.position = None
 
         self._verbose = False
 
-    def all_scalar_data(self):
-        vars = [i for i in dir(self) if not callable(getattr(self, i)) and
-                not i.startswith("__") and
-                isinstance(i, pd.DataFrame)]
+    def to_stock_data_day(self, date):
+        if type(date) is not datetime.datetime and type(date) is not pd.tslib.Timestamp:
+            date = datetime.datetime.strptime(date, "%Y-%m-%d")
 
-    def get_day_data(self, date):
-        # TODO Make this get the data for the day
-        for point in self.__dict__:
-            if point is not None:
-                print(point, date)
+        class_data = [i for i in dir(self) if not callable(getattr(self, i)) and
+                        not i.startswith("__") and type(getattr(self, i)) is pd.DataFrame]
+        df = pd.DataFrame()
+        for i in class_data:
+            df = join_features(df, getattr(self, i), fill_method=FillMethod.FUTURE_KROGH)
+        return df.ix[date, :]
+
+    def to_stock_data_date_range(self, start_date=None, end_date=None):
+        if end_date is None:
+            end_date = self.dates[-1]
+
+        if start_date is None:
+            start_date = self.dates[0]
+
+        if type(end_date) is not datetime.datetime and type(end_date) is not pd.tslib.Timestamp:
+            end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d")
+
+        if type(start_date) is not datetime.datetime and type(start_date) is not pd.tslib.Timestamp:
+            start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+
+        class_data = [i for i in dir(self) if not callable(getattr(self, i)) and not i.startswith("__") and
+                      type(getattr(self, i)) is pd.DataFrame]
+        df = pd.DataFrame()
+        for i in class_data:
+            df = join_features(df, getattr(self, i), fill_method=FillMethod.FUTURE_KROGH)
+        return df.ix[start_date:end_date, :]
 
     def __str__(self):
         def convert_list_to_string(lst):
@@ -664,6 +739,8 @@ class DataTypes:
     # TODO add methods to get short mid and longterm gains
     # TODO add methods to get past Gains
     # TODO add algorithm to calcualate any type of gains and associated risk in terms of volitility of gains and such
+
+    # methods that are collected when all are requested
     ALL = [google_trends, ad_meter, year_data, month_data, week_data, twitter_feed, twitter_sentiment, reddit_feed,
            reddit_sentiment, press_release_feed, press_release_sentiment, moving_average_200, moving_average_50,
            trailing_moving_average_12, trailing_moving_average_26, volatility, relative_strength_index,
@@ -699,30 +776,49 @@ class Universe(object):
         data.str_dates = [str(i)[:USEFUL_TIMESTAMP_CHARS] for i in list(data.market.index)]
         data.dates = data.market.index
 
-        self.str_dates = data.str_dates
-        self.dates = data.dates
+        for i in data.dates:
+            if i not in self.dates:
+                self.dates += [i]
+                self.dates.sort()
+                self.str_dates = [str(i)[:USEFUL_TIMESTAMP_CHARS] for i in list(self.dates)]
 
         for collection_function in self.features:
             collection_function(data)
 
-        self.stock_data[symbol].position = []
-        for date in data.dates:
-            self.stock_data[symbol].position += [0]
+        data.position = []
 
-        self.stock_data[symbol].position =\
-            pd.DataFrame({"position": self.stock_data[symbol].position}).set_index(self.stock_data[symbol].dates)
+        for _ in data.dates:
+            data.position += [0]
+            self.cash += [self.starting_capital]
 
+        data.position = pd.DataFrame({"position": data.position}).set_index(data.dates)
+
+        self.cash = pd.DataFrame({"cash": self.cash}).set_index(data.dates)
         debug_message(data)
         self.stock_data[symbol] = data
 
-
-    def get_back_data(self,date):
+    def get_back_data(self, end_date=None, stocks=None):
         """
         gets the data up to the date
-        :param date: date to get data up to
+        :param end_date: date to get data up to
+        :param stocks: list of stocks to get the back data for None gets all
+
         :return: StockData
         """
-        pass
+        if end_date is None:
+            end_date = self.dates[-1]
+
+        if type(end_date) is not datetime.datetime and type(end_date) is not pd.tslib.Timestamp:
+            end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d")
+
+        if stocks is None:
+            stocks = self.stocks
+
+        info = {}
+        for stock in stocks:
+            info[stock] = self.stock_data[stock].to_stock_data_date_range(end_date)
+
+        return info
 
     def collect_all_stock_data(self):
         """
@@ -732,13 +828,13 @@ class Universe(object):
         for stock in self.stocks:
             self.add_stock(stock)
 
-    def __init__(self, stocks, start_date='FiveYear', end_date='historical', features=None, verbose=False, capital=0):
+    def __init__(self, stocks=None, start_date='FiveYear', end_date='Today', features=None, verbose=False, capital=0):
         """
         initializes the stock universe
-        :param stocks:
-        :param start_date:
-        :param end_date:
-        :param features:
+        :param stocks: list of stocks to add
+        :param start_date: the date to start collection on 'FiveYear' for 5 years of data
+        :param end_date: the date to end collection on 'Today' for today's date
+        :param features: list of features to collect data for.
         """
 
         # Set default features
@@ -756,37 +852,47 @@ class Universe(object):
         self.stocks = stocks
         self.features = features
         self.stock_data = {}
-        self.end_date = datetime.datetime.historical() if end_date == 'historical' \
+        end_date = datetime.datetime.historical() if end_date == 'Today' \
             else datetime.datetime.strptime(end_date, "%Y-%m-%d")
 
-        self.start_date = self.end_date - datetime.timedelta(365 * 5 + 1) if start_date == 'FiveYear' \
+        if type(end_date) is not datetime.datetime and type(end_date) is not pd.tslib.Timestamp:
+            end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d")
+
+        self.end_date = end_date
+
+        start_date = end_date - datetime.timedelta(365 * 5 + 1) if start_date == 'FiveYear' \
             else datetime.datetime.strptime(start_date, "%Y-%m-%d")
+
+        if type(start_date) is not datetime.datetime and type(start_date) is not pd.tslib.Timestamp:
+            start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+
+        self.start_date = start_date
 
         self.date = start_date  # initial date that the stock universe is on
 
         # create a list of dates in the YYYY-MM-DD format
         self.str_dates = []
         self.dates = []
+
+        self.starting_capital = capital
+        self.cash = []
+
         self.collect_all_stock_data()
-        self.capital = capital
 
         # TODO add ability to order stocks and build a profile having total percent returns as well as capital
         # TODO have ability to select types of data to get fundementals, trends, stock twits anal,
         # TODO ad meter, past prices and volumes, twitter reddit and press releases
 
     def get_data(self, stock=None):
+        """
+        gets data for all stocks or a specific stock
+        :param stock: the stock to collect data for None gets data for all
+        :return: the data for the stock(s)
+        """
         if stock is None:
             return self.stock_data
         else:
             return self.stock_data[stock]
-
-    def run_back_test(self,algorithm):
-        """
-        runs the back test algorithm to
-        :param algorithm: algorthm that takes backData(data up to the day) into account
-        :return: total returns for each day in the back test
-        """
-        pass
 
     def get_data_date(self, date):
         """
@@ -794,45 +900,72 @@ class Universe(object):
         :param date: the date to get data for
         :return: StockData for the day
         """
-        pass
+        data = {}
+        for stock in self.stocks:
+            data[stock] = self.stock_data[stock].to_stock_data_day(date)
+        return data
 
-    def get_data_historical(self):
+    def collect_data_date(self, date=None):
+        """
+        recollects data for a given date
+        :param date: date to collect data for. Universe today by default
+        :return: None
+        """
+        if date is None:
+            date = self.date
         # TODO make it so it doenst re-collect all data and just adds historical's data
         self.collect_all_stock_data()
 
     def get_date(self):
+        """
+        gets the current date
+        :return: the current date of the universe
+        """
         return self.date
 
-    def __next__(self):
-        found = False
-        for i in self.dates:
-            if self.date == i:
-                found = True
-            if found:
-                self.date = i
-                return
-
-    def plot_data(self, symbols, columns):
+    def plot_data(self, symbols, columns, start_date=None, end_date=None):
+        """
+        uses matplotlib to plot the data collected
+        :param symbols: the symbols to plot
+        :param columns: list of columns to plot
+        :param start_date: starting date to plot None for beginning
+        :param end_date: ending date to plot None for end
+        :return: None
+        """
         # TODO plot stock data for given symbols, maybe on a single graph
         pass
 
-    def get_data_dates(self, start_date, end_date):
+    def get_data_dates(self, symbol, start_date, end_date):
         pass
 
-    def update_data(self, stock=None):
-        pass
+    def update_data(self, stocks=None):
+        """
+        updates all data for stocks
+        :param stocks: updates for all if none, or for a list of stocks
+        :return: None
+        """
+        if stocks is None:
+            self.collect_all_stock_data()
+            return
+        for stock in stocks:
+            self.add_stock(stock)
 
-    def remove_stock(self,stock):
+    def remove_stock(self, stock):
+        """
+        removes a stock from the universe
+        :param stock: symbol of the stock to remove
+        :return: None
+        """
         if stock in self.stocks:
             self.stocks.remove(stock)
         if stock in self.stock_data.keys():
             del self.stock_data[stock]
 
-    def order_stock(self, stock, ammount, date=None):
+    def order_stock(self, stock, amount, date=None):
         """
-        orders an ammount of stocks if is able to be done
+        orders an amount of stocks if is able to be done
         :param stock: the name of stock to order
-        :param ammount: ammount of the stock to buy
+        :param amount: amount of the stock to buy
         :param date: date to buy on
         :return: true if can be bought false if it is not purchased
         """
@@ -840,50 +973,180 @@ class Universe(object):
         if date is None:
             date = self.date
 
-        self.stock_data[stock].position.set_value(date, 'position', ammount)
+        if type(date) is not datetime.datetime and type(date) is not pd.tslib.Timestamp:
+            date = datetime.datetime.strptime(date, "%Y-%m-%d")
 
+        cost = self.stock_data[stock].market['Close'][date] * (amount -
+                                                               self.stock_data[stock].position['position'][date])
+
+        self.stock_data[stock].position.set_value(date, 'position', amount)
+
+        self.cash.set_value(date, "cash", self.cash.get_value(date, 'cash') - cost)
+        last_date = None
+        for d in self.dates[self.dates.index(date):]:
+            if last_date is None:
+                last_date = d
+            else:
+                self.stock_data[stock].position['position'][d] = self.stock_data[stock].position['position'][last_date]
+                self.cash['cash'][d] = self.cash['cash'][last_date]
         return True
 
-    def get_day_evaluation(self,stocks):
+    def buy_stock(self, stock, amount, date=None):
+        """
+        buys an amount of stocks if is able to be done
+        :param stock: the name of stock to order
+        :param amount: amount of the stock to buy
+        :param date: date to buy on
+        :return: true if can be bought false if it is not purchased
+        """
+        if date is None:
+            date = self.date
+
+        if type(date) is not datetime.datetime and type(date) is not pd.tslib.Timestamp:
+            date = datetime.datetime.strptime(date, "%Y-%m-%d")
+
+        self.order_stock(stock, self.stock_data[stock].position['position'][date] + amount, date)
+
+    def sell_stock(self, stock, amount, date=None):
+        """
+        sells an amount of stocks if is able to be done
+        :param stock: the name of stock to order
+        :param amount: amount of the stock to buy
+        :param date: date to buy on
+        :return: true if can be bought false if it is not purchased
+        """
+        if date is None:
+            date = self.date
+
+        if type(date) is not datetime.datetime and type(date) is not pd.tslib.Timestamp:
+            date = datetime.datetime.strptime(date, "%Y-%m-%d")
+
+        self.order_stock(stock, self.stock_data[stock].position['position'][date] - amount, date)
+
+    # TODO some randomness to buys so they do not always happen at high and low points
+
+    def get_day_returns(self, stocks=None, date=None):
         """
         gets value for the day based on stock holdings
-        :param stocks:
-        :return:
-        """
-        pass
-
-    def get_evaluation(self, start=None, end=None, stocks=None):
-        """
-        gets the returns over a peroid of time for a set of stocks
-        :param start: the strat date to get profits
-        :param end: end date to calcualte profits
-        :param stock: the list of stocks to get the profits for
-        :return: profits in dollars
+        :param stocks: stocks to get evaluation on
+        :param date: date to get the evaluated price for None for today in universe
+        :return: money in stocks
         """
         if stocks is None:
-            stocks= self.stocks
+            stocks = self.stocks
 
-        if start is None:
-            start = self.dates[0]
+        if date is None:
+            date = self.date
 
-        if end is None:
-            end = self.dates[-1]
+        if type(date) is not datetime.datetime and type(date) is not pd.tslib.Timestamp:
+            date = datetime.datetime.strptime(date, "%Y-%m-%d")
 
-        dates_to_check = self.dates[self.dates.index(start):self.dates.index(end)]
-        cash = 0
-        stocks = 0
-        total_assets = 0
-
+        stock_money = 0
         for stock in stocks:
-            for day in dates_to_check:
-        # TODO HOW DO I deal with buys and sells
+            stock_day = self.stock_data[stock]
+            # TODO find a better way than avging open and cloase
+            stock_money += stock_day.position['position'][date] *\
+                           (stock_day.market['Close'][date] + stock_day.market['Open'][date])/2
 
-        pass
+        return stock_money
 
-    def set_capital(self, ammount):
-        self.capital = ammount
+    def run_back_test(self, algorithm):
+        """
+        runs the back test algorithm to
+        :param algorithm: algorithm that takes [backData(data up to the day), original order (type Order)] into account
+        :return: total returns for each day in the back test
+        """
+        for date in self.dates:
+            original_order = Order()
+            for stock in self.stocks:
+                original_order.order(stock, self.stock_data[stock].position['position'][date])
+            make_order = algorithm(self.get_back_data(date), original_order)
+
+            for stock in make_order.orders:
+                self.order_stock(stock, make_order.orders[stock], date)
+
+    def get_returns(self, start_date=None, end_date=None, stocks=None):
+        """
+        gets the returns over a peroid of time for a set of stocks
+        :param start_date: the strat date to get profits
+        :param end_date: end date to calcualte profits
+        :param stocks: the list of stocks to get the profits for
+        :return: DataFrame of profits for every day
+        """
+        if stocks is None:
+            stocks = self.stocks
+
+        if start_date is None:
+            start_date = self.dates[0]
+
+        if end_date is None:
+            end_date = self.dates[-1]
+
+        if type(end_date) is not datetime.datetime and type(end_date) is not pd.tslib.Timestamp:
+            end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d")
+
+        if type(start_date) is not datetime.datetime and type(start_date) is not pd.tslib.Timestamp:
+            start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+
+        dates_to_check = self.dates[self.dates.index(start_date): self.dates.index(end_date) + 1]
+
+        stock_money = []
+
+        for date in dates_to_check:
+            stock_money += [self.get_day_returns(stocks, date)]
+
+        stock_money = pd.DataFrame({"stock value": stock_money}).set_index([self.dates])
+
+        return_info = join_features(stock_money, self.cash)
+        return_info['value'] = return_info['cash'] + return_info['stock value']
+
+        return return_info
+
+    def set_capital(self, amount):
+        """
+        sets the amount of capatal owned
+        :param amount: amount of capital to set
+        :return: None
+        """
+        self.starting_capital = amount
+
+    def add_feature(self, feature):
+        """
+        adds a feature for data to collect
+        :param feature: DataTypes method to collect a feature
+        :return: None
+        """
+        self.features += [feature]
+        for stock in self.stocks:
+            feature(self.stock_data[stock])
+
+    def __next__(self):
+        """
+        Moves to the next day
+        :return: true if next day is found false if None
+        """
+        found = False
+        for i in self.dates:
+            if self.date == i:
+                found = True
+            if found:
+                for stock in self.stocks:
+                    # update positions to cary over to next day
+                    self.stock_data[stock].position['position'][i] =\
+                        self.stock_data[stock].position['position'][self.date]
+
+                    self.cash['cash'][i] = self.cash['cash'][self.date]
+
+                self.date = i
+                return True
+        return False
 
     def __getitem__(self, item):
+        """
+        gets a stocks data
+        :param item: stock symbol
+        :return: the data for that stock
+        """
         return self.get_data(stock=item)
 
     def __delitem__(self, key):
@@ -892,9 +1155,22 @@ class Universe(object):
     def __len__(self):
         return len(self.stocks)
 
-    def __contains__(self,item):
+    def __contains__(self, item):
         return item in self.stock_data.keys()
+
+
 if __name__ == '__main__':
-    a = Universe(['MMM'], "2012-03-05", "2012-06-05", features=DataTypes.ALL)
-    a.add_stock('X')
-    print(len(a))
+    a = Universe(['MMM'], "2012-03-05", "2012-06-05", features=DataTypes.ALL, capital=10000)
+    # a.order_stock('MMM', 10, "2012-03-14")
+
+    def alg(data, order):
+        print(data['MMM'])
+        order.buy('MMM', 2)
+        return order
+
+    a.run_back_test(alg)
+    rets = a.get_returns()
+
+    print(rets)
+    rets.plot()
+    plt.show()

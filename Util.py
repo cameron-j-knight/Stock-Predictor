@@ -51,10 +51,8 @@ def future_krogh(df):
     # TODO make it take past data that can be used to get futures with more accuraccy building o that initial
     new_df = pd.DataFrame()
     for column in df:
-        print(column)
         indexes = [0]
         for i in range(1, len(df[column])):
-            print(df[column][i])
             if pd.isnull(df[column][i-1]) and not pd.isnull(df[column][i]):
                 indexes += [i]
         indexes += [-1]
