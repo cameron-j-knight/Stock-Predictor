@@ -55,10 +55,14 @@ def future_krogh(df):
         for i in range(1, len(df[column])):
             if pd.isnull(df[column][i-1]) and not pd.isnull(df[column][i]):
                 indexes += [i]
-        indexes += [-1]
+        indexes += ['Last']
         dfs = []
         for i in range(1, len(indexes)):
-            dfs += [df[column][indexes[i-1]:indexes[i]]]
+            if indexes[i] is "Last":
+                dfs += [df[column][indexes[i-1]:]]
+            else:
+                dfs += [df[column][indexes[i-1]:indexes[i]]]
+
         for i in range(len(dfs)):
             dfs[i] = dfs[i].interpolate('krogh')
         new_df[column] = pd.concat(dfs)
