@@ -180,9 +180,9 @@ class StockData(object):
         dataframes = [i for i in dir(self) if not callable(getattr(self, i)) and not i.startswith("__")
                       and type(getattr(self, i)) is pd.DataFrame]
         dictionaries = [i for i in dir(self) if not callable(getattr(self, i)) and not i.startswith("__")
-                      and type(getattr(self, i)) is dict]
+                        and type(getattr(self, i)) is dict]
         constant_values = [i for i in dir(self) if not callable(getattr(self, i)) and not i.startswith("__")
-                      and getattr(self, i) is not None and i not in dataframes and i not in dictionaries]
+                           and getattr(self, i) is not None and i not in dataframes and i not in dictionaries]
         new_stock_data = StockData()
 
         for i in dataframes + dictionaries:
@@ -324,6 +324,14 @@ class StockData(object):
         build_string += build_scalar_string(self.position, "Position")
 
         return build_string[:-2]
+
+    def __len__(self):
+        dataframes = [i for i in dir(self) if not callable(getattr(self, i)) and not i.startswith("__")
+                      and type(getattr(self, i)) is pd.DataFrame]
+        dictionaries = [i for i in dir(self) if not callable(getattr(self, i)) and not i.startswith("__")
+                        and type(getattr(self, i)) is dict]
+
+        return max([len(i) for i in dataframes + dictionaries])
 
 
 class DataTypes:
@@ -898,15 +906,16 @@ class Universe(object):
             collection_function(data)
 
         data.position = []
-
         for _ in data.dates:
             data.position += [0]
-            self.cash += [self.starting_capital]
+            if type(self.cash) is not pd.DataFrame:
+                self.cash += [self.starting_capital]
 
         data.position = pd.DataFrame({"Position": data.position}).set_index(data.dates)
-
-        self.cash = pd.DataFrame({"cash": self.cash}).set_index(data.dates)
+        if type(self.cash) is not pd.DataFrame:
+            self.cash = pd.DataFrame({"cash": self.cash}).set_index(data.dates)
         debug_message(data)
+        self.shuffled_data_reset()
         self.stock_data[symbol] = data
 
     def get_back_dataframe(self, end_date=None, stocks=None):
@@ -1257,7 +1266,7 @@ class Universe(object):
         for stock in self.stocks:
             feature(self.stock_data[stock])
 
-    def shuffled_data_avalible(self):
+    def shuffled_data_available(self):
         """
         gets the remaining number of data points available to retrieve
         :return: number of data points left
@@ -1300,13 +1309,13 @@ class Universe(object):
 
         # Cleanup
         delete = None
-        for stock in self.unique_data.keys():
-            if len(self.unique_data[stock]) == 0:
-                delete = stock
+        for s in self.unique_data.keys():
+            if len(self.unique_data[s]) == 0:
+                delete = s
         if delete is not None:
-            del self.unique_data[delete]
+            del self.unique_data[s]
 
-        return data
+        return data[stock]
 
     def __next__(self):
         """
@@ -1348,7 +1357,8 @@ class Universe(object):
 
 
 if __name__ == '__main__':
-    a = Universe(['MMM'], "2012-03-05", "2012-06-05", features=DataTypes.ALL, capital=10000)
+    a = Universe(['MMM', "X"], "2010-01-01", "2017-01-01", features=DataTypes.ALL, capital=10000)
+    a.add_stock("YHOO")
     # a.order_stock('MMM', 10, "2012-03-14")
 
     def alg(data, order, info):
@@ -1358,9 +1368,9 @@ if __name__ == '__main__':
             order.sell('MMM', data['MMM']['Position'][info['date']])
 
         return order
-    while a.shuffled_data_avalible() > 0:
-        print("Available:", a.shuffled_data_avalible())
-        print(a.shuffled_data_get()['MMM'])
+    while a.shuffled_data_available() > 0:
+        print("Available:", a.shuffled_data_available())
+        print(a.shuffled_data_get())
 
     # a.run_back_test(alg)
     # rets = a.get_returns()
